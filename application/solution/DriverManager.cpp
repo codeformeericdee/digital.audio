@@ -10,44 +10,70 @@
 namespace Workstation
 {
 
+//Private
+	DriverContainer DriverManager::staticDrivers;
+	map<int, char*>* DriverManager::staticdriverNames;
+	char* DriverManager::staticActiveDriverName;
+
 //Public
-    DriverManager& DriverManager::GetInstance(char* driverName, DriverContainer* drivers)
+    DriverManager& DriverManager::GetInstance(map<int, char*>* driverNames)
     {
-		static DriverManager instance{driverName, drivers};
+		for (const auto& name : (*driverNames))
+		{
+			switch (name.first)
+			{
+			case TYPEASIO:
+				staticDrivers.AsioDriverInfo = ASIODriverInfo();
+				staticDrivers.IsInitialized = true;
+				break;
+			case TYPEOPENAL:
+				break;
+			default:
+				printf("This cannot run that type of driver.");
+				break;
+			}
+		}
+		static DriverManager instance{ driverNames };
         return instance;
     }
 
-    bool DriverManager::ChangeToDriver(int type, bool openControls)
+    bool DriverManager::ChangeToDriver(char* driverName, bool openControls)
     {
-		switch (type)
+		for (const auto& name : (*staticdriverNames))
 		{
-		case 1:
-			return this->LoadASIODriver(openControls);
-		case 2:
-			return false;
-		default:
-			printf("A driver type must be specified from 1(ASIO) or 2(OPENAL)");
-			return false;
+			int key = name.first;
+			char* archivedName = name.second;
+
+			if (strcmp(archivedName, driverName) == 0)
+			{
+				switch (key)
+				{
+				case TYPEASIO:
+					staticActiveDriverName = archivedName;
+					return this->LoadAsASIODriver(openControls);
+				case TYPEOPENAL:
+					return false;
+				default:
+					printf("This cannot run that type of driver.");
+					return false;
+				}
+			}
 		}
     }
 
 //Private
-	char* DriverManager::staticDriverName;
-	DriverContainer* DriverManager::staticDrivers;
-
-    DriverManager::DriverManager(char* driverName, DriverContainer* drivers)
+    DriverManager::DriverManager(map<int, char*>* driverNames)
     {
-		staticDriverName = driverName;
-		staticDrivers = drivers;
+		staticdriverNames = driverNames;
     }
 
-	bool DriverManager::LoadASIODriver(bool openControls)
+	bool DriverManager::LoadAsASIODriver(bool openControls)
 	{
-		if (loadAsioDriver(staticDriverName))
+		if (loadAsioDriver(staticActiveDriverName))
 		{
-			staticDrivers->asioDriverInfo->sysRef = 0; // Find out what this one does
-			staticDrivers->asioDriverInfo->asioVersion = 0; // Find out how to check for the version
-			if (ASIOInit(staticDrivers->asioDriverInfo) == ASE_OK)
+			staticDrivers.AsioDriverInfo.sysRef = 0; // Find out what this one does
+			staticDrivers.AsioDriverInfo.asioVersion = 0; // Find out how to check for the version
+			if (ASIOInit(&staticDrivers.AsioDriverInfo) == ASE_OK)
 			{
 				openControls ? ASIOControlPanel() : NULL;
 				printf(
@@ -55,13 +81,18 @@ namespace Workstation
 					"The driver you are using is: %s\n"
 					"The driver is on version number: %d\n"
 					"The ASIO version is: %d\n",
-					staticDrivers->asioDriverInfo->name,
-					staticDrivers->asioDriverInfo->driverVersion,
-					staticDrivers->asioDriverInfo->asioVersion);
+					staticDrivers.AsioDriverInfo.name,
+					staticDrivers.AsioDriverInfo.driverVersion,
+					staticDrivers.AsioDriverInfo.asioVersion
+				);
 				return true;
 			}
 			else
 			{
+				printf(
+					"Due to an unknown error, this driver could not be used."
+					"Try again or try another driver name."
+				);
 				return false;
 			}
 		}

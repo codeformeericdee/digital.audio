@@ -9,11 +9,15 @@
 #include "asio.h"
 #include "asiodrivers.h"
 #include <cstdio>
+#include <map>
+#include <memory>
 // Points to asiodrivers.cpp
 bool loadAsioDriver(char* name);
+using namespace std;
 
 typedef struct DriverContainer {
-    ASIODriverInfo* asioDriverInfo;
+    bool IsInitialized = false;
+    ASIODriverInfo AsioDriverInfo;
 };
 
 #define TYPEASIO 1
@@ -26,13 +30,14 @@ namespace Workstation
 
     public:
         void operator=(DriverManager const&) = delete;
-        static DriverManager& GetInstance(char* driverName, DriverContainer* drivers);
-        bool ChangeToDriver(int type, bool openControls = false);
+        static DriverManager& GetInstance(map<int, char*>* driverNames);
+        bool ChangeToDriver(char* driverName, bool openControls = false);
 
     private:
-        static DriverContainer* staticDrivers;
-        static char* staticDriverName;
-        DriverManager(char* driverName, DriverContainer* drivers);
-        bool LoadASIODriver(bool openControls = false);
+        static DriverContainer staticDrivers;
+        static map<int, char*>* staticdriverNames; // Set this to delete/shutdown if dereferenced
+        static char* staticActiveDriverName;
+        DriverManager(map<int, char*>* driverNames);
+        bool LoadAsASIODriver(bool openControls = false);
     };
 }
