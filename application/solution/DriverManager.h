@@ -15,11 +15,6 @@
 bool loadAsioDriver(char* name);
 using namespace std;
 
-typedef struct DriverContainer {
-    bool IsInitialized = false;
-    ASIODriverInfo AsioDriverInfo;
-};
-
 #define TYPEASIO 1
 #define TYPEOPENAL 2
 
@@ -34,7 +29,10 @@ namespace Workstation
         bool ChangeToDriver(char* driverName, bool openControls = false);
 
     private:
-        static DriverContainer staticDrivers;
+        static struct DriverContainer {
+            bool IsInitialized = false;
+            ASIODriverInfo AsioDriverInfo;
+        } staticDrivers;
         static map<int, char*>* staticdriverNames; // Set this to delete/shutdown if dereferenced
         static char* staticActiveDriverName;
         DriverManager(map<int, char*>* driverNames);

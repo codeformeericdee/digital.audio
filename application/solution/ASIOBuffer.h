@@ -18,8 +18,7 @@ namespace ASIO
     {
 
     public:
-        ASIOBuffer(ASIODriverInfo* driverInfo, ASIOChannelInfo* channelInfo);
-        bool Start(ASIODriverInfo* driverInfo);
+        ASIOBuffer();
 
     private:
         long minimumSize, maximumSize, preferredSize, granularity;
@@ -34,5 +33,6 @@ namespace ASIO
         bool assignCallbacks();
         bool findBufferData();
         bool buildBuffer();
+        bool start();
     };
 }

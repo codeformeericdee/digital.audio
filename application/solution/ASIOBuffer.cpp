@@ -10,19 +10,13 @@
 namespace ASIO
 {
 //Public
-	ASIOBuffer::ASIOBuffer(ASIODriverInfo* driverInfo, ASIOChannelInfo* channelInfo)
+	ASIOBuffer::ASIOBuffer()
 	{
 		this->minimumSize = 0;
 		this->maximumSize = 0;
 		this->preferredSize = 0;
 		this->granularity = 0;
-		this->channelInfo = channelInfo;
-		this->Start(driverInfo);
-	}
-
-	bool ASIOBuffer::Start(ASIODriverInfo* driverInfo)
-	{
-		return this->assignCallbacks()? this->buildBuffer() : false;
+		this->start();
 	}
 
 //Private
@@ -166,5 +160,10 @@ namespace ASIO
 		staticbufferInfo.channelNum = 0;
 		ASIOCreateBuffers(&staticbufferInfo, 1, 256, &this->callBacks);
 		return this->findBufferData();
+	}
+
+	bool ASIOBuffer::start()
+	{
+		return this->assignCallbacks() ? this->buildBuffer() : false;
 	}
 }

@@ -56,7 +56,7 @@ namespace Workstation
     }
 
 //Private
-	DriverContainer DriverManager::staticDrivers;
+	struct DriverManager::DriverContainer DriverManager::staticDrivers;
 	map<int, char*>* DriverManager::staticdriverNames;
 	char* DriverManager::staticActiveDriverName;
 
