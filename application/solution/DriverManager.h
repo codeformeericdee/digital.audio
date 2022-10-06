@@ -6,8 +6,13 @@
 */
 
 #pragma once
+
+#ifndef ASIOLIB
+#define ASIOLIB
 #include "asio.h"
 #include "asiodrivers.h"
+#endif
+
 #include <cstdio>
 #include <map>
 #include <memory>
@@ -33,7 +38,7 @@ namespace Workstation
             bool IsInitialized = false;
             ASIODriverInfo AsioDriverInfo;
         } staticDrivers;
-        static map<int, char*>* staticdriverNames; // Set this to delete/shutdown if dereferenced
+        static map<int, char*>* staticDriverNames; // Set this to delete/shutdown if dereferenced
         static char* staticActiveDriverName;
         DriverManager(map<int, char*>* driverNames);
         bool LoadAsASIODriver(bool openControls = false);

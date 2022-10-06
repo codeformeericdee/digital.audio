@@ -14,7 +14,10 @@ namespace Workstation
     {
 		for (const auto& name : (*driverNames))
 		{
-			switch (name.first)
+			int key = name.first;
+			char* archivedName = name.second;
+
+			switch (key)
 			{
 			case TYPEASIO:
 				staticDrivers.AsioDriverInfo = ASIODriverInfo();
@@ -23,7 +26,7 @@ namespace Workstation
 			case TYPEOPENAL:
 				break;
 			default:
-				printf("This cannot run that type of driver.");
+				printf("This cannot run the driver named %s due to an unknown type.", archivedName);
 				break;
 			}
 		}
@@ -33,7 +36,7 @@ namespace Workstation
 
     bool DriverManager::ChangeToDriver(char* driverName, bool openControls)
     {
-		for (const auto& name : (*staticdriverNames))
+		for (const auto& name : (*staticDriverNames))
 		{
 			int key = name.first;
 			char* archivedName = name.second;
@@ -48,7 +51,7 @@ namespace Workstation
 				case TYPEOPENAL:
 					return false;
 				default:
-					printf("This cannot run that type of driver.");
+					printf("This cannot run that type of driver. Consider removing it.");
 					return false;
 				}
 			}
@@ -57,12 +60,12 @@ namespace Workstation
 
 //Private
 	struct DriverManager::DriverContainer DriverManager::staticDrivers;
-	map<int, char*>* DriverManager::staticdriverNames;
+	map<int, char*>* DriverManager::staticDriverNames;
 	char* DriverManager::staticActiveDriverName;
 
     DriverManager::DriverManager(map<int, char*>* driverNames)
     {
-		staticdriverNames = driverNames;
+		staticDriverNames = driverNames;
     }
 
 	bool DriverManager::LoadAsASIODriver(bool openControls)
@@ -75,10 +78,11 @@ namespace Workstation
 			{
 				openControls ? ASIOControlPanel() : NULL;
 				printf(
-					"---HOST INFO---\n"
+					"---ASIO DRIVER INFO---\n"
 					"The driver you are using is: %s\n"
 					"The driver is on version number: %d\n"
-					"The ASIO version is: %d\n",
+					"The version is: %d\n"
+					"---END OF DRIVER INFO---\n",
 					staticDrivers.AsioDriverInfo.name,
 					staticDrivers.AsioDriverInfo.driverVersion,
 					staticDrivers.AsioDriverInfo.asioVersion

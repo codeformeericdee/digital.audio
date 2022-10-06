@@ -6,44 +6,30 @@
 */
 
 #include "ASIOBuffer.h"
-#include "DriverManager.h"
-#include <map>
+#include "Playback.h"
 
 #define NAMEDRIVER "Yamaha Steinberg USB ASIO"
+#define SAMPLERATEPLAYBACK 44100.0f
 
 using namespace std;
 
-namespace Playback
-{
-	typedef struct DriverCache {
-		map<int, char*> myDrivers = {};
-		map<int, char*>* SendDrivers() { return &this->myDrivers; }
-		void AddToMap(int driverType, char* driverName) { this->myDrivers.insert({ driverType, driverName }); };
-	};
-
-	Workstation::DriverManager UseDriverCache(DriverCache* drivers)
-	{
-		return Workstation::DriverManager::GetInstance(drivers->SendDrivers());
-	}
-}
-
-using namespace Playback;
-
 int main(int argc, char* argv[])
 {
-	DriverCache myDrivers = DriverCache();
+	Playback::DriverCache myDrivers = Playback::DriverCache();
 	/* Number of inputand outputs supported by the host. These can be changed. */
 	enum { kMaxInputChannels = 32, kMaxOutputChannels = 32 };
-	bool openControls = true;
+	int channelIOLimits[2] = { kMaxInputChannels, kMaxOutputChannels };
+	bool openControls = false;
 
 	ASIOChannelInfo asioChannelInfo[kMaxInputChannels + kMaxOutputChannels];
+	ASIOBufferInfo asioBufferInfo[kMaxInputChannels + kMaxOutputChannels];
 
 	myDrivers.AddToMap(TYPEASIO, NAMEDRIVER);
 	Workstation::DriverManager driverManager = UseDriverCache(&myDrivers);
 	driverManager.ChangeToDriver(NAMEDRIVER, openControls);
 
 	/* Buffer instantiation */
-	ASIO::ASIOBuffer bufferOne = ASIO::ASIOBuffer();
+	ASIO::ASIOBuffer bufferOne = ASIO::ASIOBuffer(SAMPLERATEPLAYBACK, &asioChannelInfo[0], &asioBufferInfo[0], channelIOLimits);
 
 	// ASIOGetChannelInfo(channelInfos);
 

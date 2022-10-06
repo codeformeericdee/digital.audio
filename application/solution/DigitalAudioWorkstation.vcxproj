@@ -232,6 +232,7 @@
     <ClCompile Include="Library\ASIO\all\asiodrivers.cpp" />
     <ClCompile Include="Library\ASIO\all\asiolist.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Playback.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ASIOBuffer.h" />
@@ -240,6 +241,7 @@
     <ClInclude Include="Library\ASIO\all\asiodrivers.h" />
     <ClInclude Include="Library\ASIO\all\asiolist.h" />
     <ClInclude Include="Library\ASIO\all\ginclude.h" />
+    <ClInclude Include="Playback.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
