@@ -9,12 +9,6 @@
 
 namespace Workstation
 {
-
-//Private
-	DriverContainer DriverManager::staticDrivers;
-	map<int, char*>* DriverManager::staticdriverNames;
-	char* DriverManager::staticActiveDriverName;
-
 //Public
     DriverManager& DriverManager::GetInstance(map<int, char*>* driverNames)
     {
@@ -62,6 +56,10 @@ namespace Workstation
     }
 
 //Private
+	DriverContainer DriverManager::staticDrivers;
+	map<int, char*>* DriverManager::staticdriverNames;
+	char* DriverManager::staticActiveDriverName;
+
     DriverManager::DriverManager(map<int, char*>* driverNames)
     {
 		staticdriverNames = driverNames;
