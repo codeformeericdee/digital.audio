@@ -1,3 +1,10 @@
+/*
+
+    Header for audio playback requests written by Eric Dee.
+    2022
+
+*/
+
 #include <map>
 
 #include "DriverManager.h"

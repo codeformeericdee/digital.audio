@@ -1,3 +1,10 @@
+/*
+
+	Code for audio playback requests written by Eric Dee.
+	2022
+
+*/
+
 #include "Playback.h"
 
 namespace Playback
