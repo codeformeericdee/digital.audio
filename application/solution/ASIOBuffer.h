@@ -36,7 +36,7 @@ namespace ASIO
         static double TimeCodeSamples;
 
     private:
-        static int limitOfInputBuffers, limitOfOutputBuffers, hostBitDepth;
+        static int limitOfInputBuffers, limitOfOutputBuffers, hostBitDepth, samplesCompleted;
 
         static long 
             minimumSize, maximumSize, preferredSize, granularity,

@@ -26,10 +26,6 @@ signed getBits(signed a, signed b)
 	}
 }
 
-//
-
-int runSamples = 0;
-
 namespace ASIO
 {	
 	/* Fields or members */
@@ -44,7 +40,8 @@ namespace ASIO
 	int 
 		ASIOBuffer::limitOfInputBuffers, 
 		ASIOBuffer::limitOfOutputBuffers,
-		ASIOBuffer::hostBitDepth;
+		ASIOBuffer::hostBitDepth,
+		ASIOBuffer::samplesCompleted;
 
 	long
 		ASIOBuffer::minimumSize, 
@@ -191,7 +188,7 @@ namespace ASIO
 					memset(bufferInfo[i].buffers[index], 0, bufferSize * 3);
 					break;
 				case ASIOSTInt32LSB:
-					if (runSamples >= sampleRate)
+					if (samplesCompleted >= sampleRate)
 					{
 						break;
 					}
@@ -199,7 +196,7 @@ namespace ASIO
 					{
 						/* Changes the void array indexer to increment by sizeof int temporarily. */
 						const int* obj = static_cast<int*>(x);
-						memcpy(bufferInfo[i].buffers[index], &obj[runSamples], bufferSize * 4);
+						memcpy(bufferInfo[i].buffers[index], &obj[samplesCompleted], bufferSize * 4);
 					}
 					break;
 				case ASIOSTFloat32LSB:
@@ -213,7 +210,7 @@ namespace ASIO
 		}
 		
 		/* This increments the run count based on buffer size. */
-		runSamples += bufferSize;
+		samplesCompleted += bufferSize;
 
 		// (Documentation)
 		// finally if the driver supports the ASIOOutputReady() optimization, do it here, all data are in place
