@@ -1,73 +1,144 @@
 /*
-
-	Code for an ASIO buffer manager written by Eric Dee.
+	Code for ASIO buffer management written by Eric Dee.
 	2022
-
 */
 
 #include "ASIOBuffer.h"
 
-namespace ASIO
+// (Documentation) conversion from 64 bit ASIOSample/ASIOTimeStamp to double float
+#if NATIVE_INT64
+#define ASIO64toDouble(a)  (a)
+#else
+const double twoRaisedTo32 = 4294967296.;
+#define ASIO64toDouble(a)  ((a).lo + (a).hi * twoRaisedTo32)
+#endif
+
+/* Function for getting the first 24 bits of a 32 bit signed for 24 bit depth. */
+signed getBits(signed a, signed b)
 {
-//Public
-	double ASIOBuffer::StaticNanoSeconds;
-	double ASIOBuffer::StaticSamples;
-	double ASIOBuffer::StaticTimeCodeSamples;
-
-	ASIOBuffer::ASIOBuffer
-	(ASIOSampleRate sampleRate, ASIOChannelInfo* channelInfo, ASIOBufferInfo* bufferInfo, int channelIOLimits[2])
+	// a == lowest
+	// b == highest
+	signed r = 0;
+	for (signed i = a; i <= b; i++)
 	{
-		/* Public */
-		StaticNanoSeconds = 0; this->StaticSamples = 0; this->StaticTimeCodeSamples = 0;
+		r |= 1 << i;
+		return r;
+	}
+}
 
-		/* Private */
-		// Limits:
+//
+
+int runSamples = 0;
+
+namespace ASIO
+{	
+	/* Fields or members */
+
+	// Public
+	double 
+		ASIOBuffer::NanoSeconds,
+		ASIOBuffer::Samples,
+		ASIOBuffer::TimeCodeSamples;
+
+	// Private
+	int 
+		ASIOBuffer::limitOfInputBuffers, 
+		ASIOBuffer::limitOfOutputBuffers,
+		ASIOBuffer::hostBitDepth;
+
+	long
+		ASIOBuffer::minimumSize, 
+		ASIOBuffer::maximumSize, 
+		ASIOBuffer::preferredSize, 
+		ASIOBuffer::granularity,
+		ASIOBuffer::numberOfInputChannels, 
+		ASIOBuffer::numberOfOutputChannels,
+		ASIOBuffer::numberOfInputBuffers, 
+		ASIOBuffer::numberOfOutputBuffers,
+		ASIOBuffer::inputLatency, 
+		ASIOBuffer::outputLatency;
+
+	ASIOChannelInfo*
+		ASIOBuffer::channelInfo;
+
+	ASIOBufferInfo*
+		ASIOBuffer::bufferInfo;
+
+	ASIOSampleRate
+		ASIOBuffer::sampleRate;
+
+	ASIOTime*
+		ASIOBuffer::timeInfo;
+
+	void*
+		ASIOBuffer::x;
+
+	/* Methods */
+	// Public
+	// Constructor
+	ASIOBuffer::ASIOBuffer (
+		ASIOSampleRate sampleRate, 
+		ASIOChannelInfo* channelInfo, 
+		ASIOBufferInfo* bufferInfo, 
+		int channelIOLimits[3]
+	)
+	{
+		this->NanoSeconds = 0; this->Samples = 0; this->TimeCodeSamples = 0;
+
+		// Channel/buffer limits gets sent as an array:
 		this->limitOfInputBuffers = channelIOLimits[0];
 		this->limitOfOutputBuffers = channelIOLimits[1];
 
-		// Buffer details:
+		// Information for the buffer:
 		this->minimumSize = 0; this->maximumSize = 0; this->preferredSize = 0; this->granularity = 0;
 		this->inputLatency = 0; this->outputLatency = 0;
-		// IO Channels
+		
+		// Number of channels from IO gets sent by host
 		this->numberOfInputChannels = 0; this->numberOfOutputChannels = 0;
-		// IO Buffers
+		// Number of buffer channels allowed gets determined by this class
 		this->numberOfInputBuffers = 0; this->numberOfOutputBuffers = 0;
 
-		// Members:
-		this->sampleRate = sampleRate;
+		// ASIO specific members:
 		this->channelInfo = channelInfo;
-		this->staticBufferInfo = bufferInfo;
+		this->bufferInfo = bufferInfo;
+		this->sampleRate = sampleRate;
+		this->timeInfo = nullptr;
+		// Callbacks get set in start.
 		
-		// Getters:
-		this->getSampleRate = this->sampleRate;
-		this->getBufferSize = this->preferredSize;
-		
+		/* This needs to be handled, but set for testing */
+		this->hostBitDepth = channelIOLimits[2];
+
 		// Initializer:
 		this->start();
 	}
 
-//Private
-	ASIOBufferInfo* ASIOBuffer::staticBufferInfo;
-	ASIOTime* ASIOBuffer::staticTimeInfo;
-	int ASIOBuffer::getSampleRate;
-	int ASIOBuffer::getBufferSize;
-
-	// (Documentation) conversion from 64 bit ASIOSample/ASIOTimeStamp to double float
-#if NATIVE_INT64
-#define ASIO64toDouble(a)  (a)
-#else
-	const double twoRaisedTo32 = 4294967296.;
-#define ASIO64toDouble(a)  ((a).lo + (a).hi * twoRaisedTo32)
-#endif
-
+	//Private
 	ASIOTime* ASIOBuffer::bufferSwitchTimeInfo(ASIOTime* timeInfo, long index, ASIOBool processNow)
 	{
+		/*
+		
+			Stereo:
+			The buffer info array is always holding all the buffers.
+			The driver decides which channels are in use, and this fills the buffers
+			that the driver is requesting based on its available channels
+
+			(This would explain why most DAWs don't dynamically update to new inputs)
+			it would be possible, but consume a lot of resources constantly checking
+			and reinstating new buffers just to see if something has been plugged in or turned
+			on.
+
+			The accepted solution seems to be just inform of all channels, and the interface
+			acts as a broadcaster, sending data regardless of whether the input or output
+			is physically connected to a trs or xlr.
+
+		*/
+
 		// (Documentation)
 		// the actual processing callback.
 		// Beware that this is normally in a seperate thread, hence be sure that you take care
 		// about thread synchronization. This is omitted here for simplicity.
 		static long processedSamples = 0;
-		staticTimeInfo = timeInfo;
+		timeInfo = timeInfo;
 
 		// (Documentation)
 		// get the time stamp of the buffer, not necessary if no
@@ -75,43 +146,74 @@ namespace ASIO
 
 		/* This converter doesn't seem needed but has been put in to study what it does */
 		if (timeInfo->timeInfo.flags & kSystemTimeValid)
-			StaticNanoSeconds = ASIO64toDouble(timeInfo->timeInfo.systemTime);
+			NanoSeconds = ASIO64toDouble(timeInfo->timeInfo.systemTime);
 		else
-			StaticNanoSeconds = 0;
+			NanoSeconds = 0;
 
 		if (timeInfo->timeInfo.flags & kSamplePositionValid)
-			StaticSamples = ASIO64toDouble(timeInfo->timeInfo.samplePosition);
+			Samples = ASIO64toDouble(timeInfo->timeInfo.samplePosition);
 		else
-			StaticSamples = 0;
+			Samples = 0;
 
 		if (timeInfo->timeCode.flags & kTcValid)
-			StaticTimeCodeSamples = ASIO64toDouble(timeInfo->timeCode.timeCodeSamples);
+			TimeCodeSamples = ASIO64toDouble(timeInfo->timeCode.timeCodeSamples);
 		else
-			StaticTimeCodeSamples = 0;
+			TimeCodeSamples = 0;
 
 		/* There is a Windows debug method in the sample to consider implementing here. */
 
-		/* Pull the buffer size for updating */
-		long bufferSize = getBufferSize;
-
-
 		/*
 		
-			Start here
+			The actual processing:
 		
 		*/
 
+		/* Pull the buffer size for updating */
+		long bufferSize = preferredSize;
 
-		/* (Eric)
-		A sine wave */
-		float* x = new float[getSampleRate];
+		setSamples(440.0f);
 
-		for (int i = 0; i < getSampleRate; i++)
+		for (int i = 0; i < (numberOfInputBuffers + numberOfOutputBuffers); i++)
 		{
-			x[i] = (sin(2 * M_PI * 440 * i) / getSampleRate); /* 2^8/2-1=127 */
-		}
+			/* If the buffer in the list of IO buffers is an output buffer */
+			if (bufferInfo[i].isInput == false)
+			{
+				// Process for outputs only
+				switch (channelInfo[i].type)
+				{
+					/* The buffer starts at 8 bits for its depth. */
+					/* Using arrays that quantify a higher resolution increases the size by a factor of 8•(Datatype / 8) */
 
-		memcpy(staticBufferInfo[0].buffers[index], x, getBufferSize);
+				case ASIOSTInt16LSB:
+					memset(bufferInfo[i].buffers[index], 0, bufferSize * 2);
+					break;
+				case ASIOSTInt24LSB:
+					memset(bufferInfo[i].buffers[index], 0, bufferSize * 3);
+					break;
+				case ASIOSTInt32LSB:
+					if (runSamples >= sampleRate)
+					{
+						break;
+					}
+					else
+					{
+						/* Changes the void array indexer to increment by sizeof int temporarily. */
+						const int* obj = static_cast<int*>(x);
+						memcpy(bufferInfo[i].buffers[index], &obj[runSamples], bufferSize * 4);
+					}
+					break;
+				case ASIOSTFloat32LSB:
+					memset(bufferInfo[i].buffers[index], 0, bufferSize * 4);
+					break;
+				case ASIOSTFloat64LSB:
+					memset(bufferInfo[i].buffers[index], 0, bufferSize * 8);
+					break;
+				}
+			}
+		}
+		
+		/* This increments the run count based on buffer size. */
+		runSamples += bufferSize;
 
 		// (Documentation)
 		// finally if the driver supports the ASIOOutputReady() optimization, do it here, all data are in place
@@ -222,8 +324,6 @@ namespace ASIO
 			if (ASIOGetBufferSize(
 				&this->minimumSize, &this->maximumSize, &this->preferredSize, &this->granularity) == ASE_OK)
 			{
-				this->setGetters();
-
 				printf("The buffer info has been found.\n");
 				printf(
 					"The buffer requirements in bytes are [ minimum: %d, maximum: %d, preferred: %d, granularity: %d ]\n",
@@ -241,18 +341,18 @@ namespace ASIO
 								"The buffer sample rate was changed."
 								"---END OF ASIO BUFFER INFO---\n"
 							);
-							// check wether the driver requires the ASIOOutputReady() optimization
+							// check whether the driver requires the ASIOOutputReady() optimization
 							// (can be used by the driver to reduce output latency by one block)
 							if (ASIOOutputReady() == ASE_OK)
 							{
 								printf("ASIO output set to ready.");
+								//this->postOutput = true;
 								return true;
-								/*asioDriverInfo->postOutput = true;*/
 							}
 							else
 							{
+								//this->postOutput = false;
 								return false;
-								//asioDriverInfo->postOutput = false;
 							}
 						}
 						else
@@ -316,16 +416,28 @@ namespace ASIO
 
 	bool ASIOBuffer::buildBuffers()
 	{
+		/*
+		
+			Stereo:
+			The channel count should always return 2 from the driver if two speakers.
+			Therefore this can be expected to generate the need for two arrays to be written
+			regardless of whether the data is mono or not, both speakers will need to be played from.
+
+		*/
+
 		/* Build a buffer specific to this instance that integrates with ASIO
-		*  This method is basically just the documentation, but with some class abstraction */
+		   This method is basically just the documentation, but with some class abstraction */
 		if (this->findLimits())
 		{
 			long i;
 			ASIOError result;
 
-			ASIOBufferInfo* bufferInfo = staticBufferInfo;
+			/* Local copy allows non invasive adjusting */
+			ASIOBufferInfo* localBufferInfo = bufferInfo;
 
 			/* Limits the buffer count to the channel count archived from the construction. */
+
+			// Input
 			if (this->numberOfInputChannels > this->limitOfInputBuffers)
 			{
 				this->numberOfInputBuffers = this->limitOfInputBuffers;
@@ -334,17 +446,33 @@ namespace ASIO
 			{
 				this->numberOfInputBuffers = this->numberOfInputChannels;
 			}
-
-			for (i = 0; i < this->numberOfInputBuffers; i++, bufferInfo++)
+			for (i = 0; i < this->numberOfInputBuffers; i++, localBufferInfo++)
 			{
-				bufferInfo->isInput = ASIOTrue;
-				bufferInfo->channelNum = i;
-				bufferInfo->buffers[0] = bufferInfo->buffers[1] = 0; // ?
+				localBufferInfo->isInput = ASIOTrue;
+				localBufferInfo->channelNum = i;
+				localBufferInfo->buffers[0] = localBufferInfo->buffers[1] = 0; // ?
 			}
 
+			// Output
+			if (this->numberOfOutputChannels > this->limitOfOutputBuffers)
+			{
+				this->numberOfOutputBuffers = this->limitOfOutputBuffers;
+			}
+			else
+			{
+				this->numberOfOutputBuffers = this->numberOfOutputChannels;
+			}
+			for (i = 0; i < this->numberOfOutputBuffers; i++, localBufferInfo++)
+			{
+				localBufferInfo->isInput = ASIOFalse;
+				localBufferInfo->channelNum = i;
+				localBufferInfo->buffers[0] = localBufferInfo->buffers[1] = 0; // ?
+			}
+
+			// Instantiate the buffer off of this class from heap
 			result = ASIOCreateBuffers(
-				staticBufferInfo, 
-				this->numberOfInputBuffers + this->numberOfOutputBuffers, 
+				this->bufferInfo,
+				this->numberOfInputBuffers + this->numberOfOutputBuffers,
 				this->preferredSize,
 				&this->callBacks
 			);
@@ -352,15 +480,20 @@ namespace ASIO
 			if (result == ASE_OK)
 			{
 				/* Gets channel info for items such as bit depth, which are crucial to operation */
-				for (i = 0; i < this->numberOfInputBuffers + this->numberOfOutputBuffers; i++)
+				for (i = 0; i < (this->numberOfInputBuffers + this->numberOfOutputBuffers); i++)
 				{
-					this->channelInfo[i].channel = staticBufferInfo[i].channelNum;
-					this->channelInfo[i].isInput = staticBufferInfo[i].isInput;
-					if (ASIOGetChannelInfo(&this->channelInfo[i]) != ASE_OK)
+					this->channelInfo[i].channel = bufferInfo[i].channelNum;
+					this->channelInfo[i].isInput = bufferInfo[i].isInput;
+
+					result = ASIOGetChannelInfo(&this->channelInfo[i]);
+					if (result != ASE_OK)
 					{
 						printf("The buffer item/channel at index %i could not get set.\n", i);
 						break;
 					}
+
+					// Host settings:
+					this->channelInfo[i].type = this->hostBitDepth;
 				}
 
 				if (result == ASE_OK)
@@ -371,7 +504,8 @@ namespace ASIO
 					// (input latency is the age of the first sample in the currently returned audio block)
 					// (output latency is the time the first sample in the currently returned audio block requires to get 
 					// to the output)
-					if (result = ASIOGetLatencies(&this->inputLatency, &this->outputLatency) == ASE_OK)
+					result = ASIOGetLatencies(&this->inputLatency, &this->outputLatency);
+					if (result == ASE_OK)
 					{
 						printf(
 							"The latencies are %d for input, and %d for output.\n", 
@@ -404,10 +538,16 @@ namespace ASIO
 	{
 		return this->assignCallbacks() ? this->buildBuffers() : false;
 	}
-	bool ASIOBuffer::setGetters()
+
+	void ASIOBuffer::setSamples(double frequency)
 	{
-		this->getBufferSize = this->preferredSize;
-		this->getSampleRate = this->sampleRate;
-		return true;
+		x = new int[sampleRate];
+		double sample = 0;
+		int* obj = static_cast<int*>(x);
+		for (int i = 0; i < sampleRate; i++)
+		{
+			sample = (sin(2 * 3.14 * frequency * i / sampleRate)) / sampleRate;
+			obj[i] = (int)(sample * 2000000000000);
+		}
 	}
 }
