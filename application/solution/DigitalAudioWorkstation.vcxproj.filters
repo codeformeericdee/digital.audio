@@ -36,6 +36,9 @@
     <ClCompile Include="Playback.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="IBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ASIOBuffer.h">
@@ -57,6 +60,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Playback.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

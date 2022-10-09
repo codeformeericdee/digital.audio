@@ -228,6 +228,7 @@
   <ItemGroup>
     <ClCompile Include="ASIOBuffer.cpp" />
     <ClCompile Include="DriverManager.cpp" />
+    <ClCompile Include="IBuffer.cpp" />
     <ClCompile Include="Library\ASIO\all\asio.cpp" />
     <ClCompile Include="Library\ASIO\all\asiodrivers.cpp" />
     <ClCompile Include="Library\ASIO\all\asiolist.cpp" />
@@ -237,6 +238,7 @@
   <ItemGroup>
     <ClInclude Include="ASIOBuffer.h" />
     <ClInclude Include="DriverManager.h" />
+    <ClInclude Include="IBuffer.h" />
     <ClInclude Include="Library\ASIO\all\asio.h" />
     <ClInclude Include="Library\ASIO\all\asiodrivers.h" />
     <ClInclude Include="Library\ASIO\all\asiolist.h" />

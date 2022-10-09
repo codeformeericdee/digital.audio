@@ -18,17 +18,19 @@
 #include "asiodrivers.h"
 #endif
 
-#include <cstdio>
 #include <corecrt_math_defines.h>
 #include "math.h"
 #include "cstring"
 #include <vector>
 
-using namespace std;
+#ifndef PLAYBACKBUFFERS
+#define PLAYBACKBUFFERS
+#include "IBuffer.h"
+#endif // !PLAYBACKBUFFERS
 
 namespace ASIO
 {
-    class ASIOBuffer
+    class ASIOBuffer : Buffers::IBuffer
     {
 
     public:
@@ -38,18 +40,12 @@ namespace ASIO
         static double Samples;
         static double TimeCodeSamples;
 
-        bool AddAmplitudes(void* newAmplitudes);
+        bool AddAmplitudes(void* newAmplitudes) override;
 
     private:
-        static int limitOfInputBuffers, limitOfOutputBuffers, hostBitDepth, samplesCompleted;
-
         static long
-            minimumSize, maximumSize, preferredSize, granularity,
-            numberOfInputChannels, numberOfOutputChannels,
-            numberOfInputBuffers, numberOfOutputBuffers,
+            granularity,
             inputLatency, outputLatency;
-
-        static void* y;
 
         static ASIOChannelInfo* channelInfo;
         static ASIOBufferInfo* bufferInfo;
@@ -64,16 +60,11 @@ namespace ASIO
 
         ASIOCallbacks callBacks;
 
-        template <typename dataType>
-        bool resetArray(void* sourceArray, int value, int count);
-
-        template<typename dataType>
-        bool tryToCallocY();
+        bool findLimits() override;
+        bool buildBuffers() override;
+        bool start() override;
 
         bool assignCallbacks();
-        bool findLimits();
-        bool buildBuffers();
-        bool start();
-        bool defineY(bool reset = false);
+        ASIOSampleRate wrapSampleRate(ASIOSampleRate newRate = NULL);
     };
 }

@@ -13,19 +13,6 @@ const double twoRaisedTo32 = 4294967296.;
 #define ASIO64toDouble(a)  ((a).lo + (a).hi * twoRaisedTo32)
 #endif
 
-/* Function for getting the first 24 bits of a 32 bit signed for 24 bit depth. */
-signed getBits(signed a, signed b)
-{
-	// a == lowest
-	// b == highest
-	signed r = 0;
-	for (signed i = a; i <= b; i++)
-	{
-		r |= 1 << i;
-		return r;
-	}
-}
-
 namespace ASIO
 {	
 	/* Fields or members */
@@ -37,21 +24,8 @@ namespace ASIO
 		ASIOBuffer::TimeCodeSamples;
 
 	// Private
-	int 
-		ASIOBuffer::limitOfInputBuffers, 
-		ASIOBuffer::limitOfOutputBuffers,
-		ASIOBuffer::hostBitDepth,
-		ASIOBuffer::samplesCompleted;
-
 	long
-		ASIOBuffer::minimumSize, 
-		ASIOBuffer::maximumSize, 
-		ASIOBuffer::preferredSize, 
 		ASIOBuffer::granularity,
-		ASIOBuffer::numberOfInputChannels, 
-		ASIOBuffer::numberOfOutputChannels,
-		ASIOBuffer::numberOfInputBuffers, 
-		ASIOBuffer::numberOfOutputBuffers,
 		ASIOBuffer::inputLatency, 
 		ASIOBuffer::outputLatency;
 
@@ -67,13 +41,11 @@ namespace ASIO
 	ASIOTime*
 		ASIOBuffer::timeInfo;
 
-	void*
-		ASIOBuffer::y;
-
 	/* Methods */
 	// Public
 	// Constructor
-	ASIOBuffer::ASIOBuffer (ASIOSampleRate sampleRate, int channelIOLimits[3])
+	ASIOBuffer::ASIOBuffer(ASIOSampleRate sampleRate, int channelIOLimits[3])
+		: Buffers::IBuffer(new int { ASIOSTInt32LSB }, 1)
 	{
 		this->NanoSeconds = 0; this->Samples = 0; this->TimeCodeSamples = 0;
 
@@ -85,7 +57,7 @@ namespace ASIO
 		/**/
 
 		// Information for the buffer:
-		this->minimumSize = 0; this->maximumSize = 0; this->preferredSize = 0; this->granularity = 0;
+		this->minimumSize = 0; this->maximumSize = 0; this->requestedSize = 0; this->granularity = 0;
 		this->inputLatency = 0; this->outputLatency = 0;
 		
 		// Number of channels from IO gets sent by host
@@ -96,7 +68,7 @@ namespace ASIO
 		// ASIO specific members:
 		this->channelInfo = new ASIOChannelInfo[this->limitOfInputBuffers + this->limitOfOutputBuffers];
 		this->bufferInfo = new ASIOBufferInfo[this->limitOfInputBuffers + this->limitOfOutputBuffers];
-		this->sampleRate = sampleRate;
+		this->wrapSampleRate(sampleRate);
 		this->timeInfo = nullptr;
 		// Callbacks get set in start.
 
@@ -167,7 +139,7 @@ namespace ASIO
 		*/
 
 		/* Pull the buffer size for updating */
-		long bufferSize = preferredSize;
+		long bufferSize = requestedSize;
 
 		for (int i = 0; i < (numberOfInputBuffers + numberOfOutputBuffers); i++)
 		{
@@ -300,46 +272,6 @@ namespace ASIO
 
 /* Non static methods */
 
-	template <typename dataType>
-	bool ASIOBuffer::resetArray(void* sourceArray, int value, int count)
-	{
-		/*
-			Reallocates the data in a void array up to a specific point based on the type.
-			This is used to ensure new or reset arrays do not have artifacts in them.
-		*/
-		try
-		{
-			dataType* object = static_cast<dataType*>(sourceArray);
-			for (int i = 0; i < count; i++)
-			{
-				object[i] = value;
-			}
-			return true;
-		}
-		catch (exception ex)
-		{
-			printf("The buffer Y array could not be cleaned out. This is the exception that happened:\n%s\n", ex.what());
-			return false;
-		}
-	}
-
-	template<typename dataType>
-	bool ASIOBuffer::tryToCallocY()
-	{
-		/*
-			Initializes an array with zeros of any type assigned to a void pointer.
-		*/
-		try
-		{
-			this->y = (dataType*)calloc(this->sampleRate, sizeof(dataType));
-			return true;
-		}
-		catch (exception ex)
-		{
-			throw exception(("The buffer could not calloc a Y array. This is the exception that happened:\n%s\n", ex.what()));
-		}
-	}
-
 	bool ASIOBuffer::assignCallbacks()
 	{
 		/* Assign event callback handling that integrates with ASIOCallbacks */
@@ -348,6 +280,19 @@ namespace ASIO
 		this->callBacks.bufferSwitch = &bufferSwitch;
 		this->callBacks.sampleRateDidChange = &sampleRateDidChange;
 		return true;
+	}
+
+	ASIOSampleRate ASIOBuffer::wrapSampleRate(ASIOSampleRate newRate)
+	{
+		if (newRate != NULL)
+		{
+			this->hostSampleRate = (int)newRate;
+		}
+		else
+		{
+			this->hostSampleRate = (int)this->sampleRate;
+		}
+		return this->sampleRate = newRate;
 	}
 
 	bool ASIOBuffer::findLimits()
@@ -362,18 +307,18 @@ namespace ASIO
 			/* Determine buffer size(Should be called before doing any changes - hence using a struct to store this
 			data) */
 			if (ASIOGetBufferSize(
-				&this->minimumSize, &this->maximumSize, &this->preferredSize, &this->granularity) == ASE_OK)
+				&this->minimumSize, &this->maximumSize, &this->requestedSize, &this->granularity) == ASE_OK)
 			{
 				printf("The buffer info has been found.\n");
 				printf(
 					"The buffer requirements in bytes are [ minimum: %d, maximum: %d, preferred: %d, granularity: %d ]\n",
-					this->minimumSize, this->maximumSize, this->preferredSize, this->granularity
+					this->minimumSize, this->maximumSize, this->requestedSize, this->granularity
 				);
-				ASIOSampleRate testRate;
-				if (ASIOGetSampleRate(&testRate) == ASE_OK)
+				ASIOSampleRate currentBufferSampleRate;
+				if (ASIOGetSampleRate(&currentBufferSampleRate) == ASE_OK)
 				{
-					printf("The sample rate is %f.\n", this->sampleRate);
-					if (testRate != this->sampleRate)
+					printf("The current buffer sample rate is %f.\n", currentBufferSampleRate);
+					if (currentBufferSampleRate != this->sampleRate)
 					{
 						if (ASIOSetSampleRate(this->sampleRate) == ASE_OK)
 						{
@@ -530,7 +475,7 @@ namespace ASIO
 			result = ASIOCreateBuffers(
 				this->bufferInfo,
 				this->numberOfInputBuffers + this->numberOfOutputBuffers,
-				this->preferredSize,
+				this->requestedSize,
 				&this->callBacks
 			);
 
@@ -594,26 +539,6 @@ namespace ASIO
 	bool ASIOBuffer::start()
 	{
 		return this->assignCallbacks() ? this->buildBuffers() : false;
-	}
-
-	bool ASIOBuffer::defineY(bool reset)
-	{
-		/* Array definition method with an override for calloc or manaul based on host needs */
-		switch (this->hostBitDepth)
-		{
-		case ASIOSTInt32LSB:
-			try
-			{
-				return reset ?
-					this->resetArray<int>(this->y, 0, this->sampleRate) : this->tryToCallocY<int>();
-			}
-			catch (exception ex)
-			{
-				throw exception(("The buffer could not generate a 32 bit depth array with this error:\n%s\n", ex.what()));
-			}
-		default:
-			return false;
-		}
 	}
 
 	bool ASIOBuffer::addAmplitudes(void* newAmplitudes)
