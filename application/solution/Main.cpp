@@ -25,10 +25,7 @@ int main(int argc, char* argv[])
 	Workstation::DriverManager driverManager = UseDriverCache(&myDrivers);
 	driverManager.ChangeToDriver(NAMEDRIVER, openControls);
 
-	/* Buffer instantiation */
-	ASIOChannelInfo asioChannelInfo[kMaxInputChannels + kMaxOutputChannels];
-	ASIOBufferInfo asioBufferInfo[kMaxInputChannels + kMaxOutputChannels];
-	ASIO::ASIOBuffer bufferOne = ASIO::ASIOBuffer(SAMPLERATEPLAYBACK, &asioChannelInfo[0], &asioBufferInfo[0], channelIOLimits);
+	ASIO::ASIOBuffer bufferOne = ASIO::ASIOBuffer(SAMPLERATEPLAYBACK, channelIOLimits);
 
 	double sample = 0;
 	int* obj = new int[SAMPLERATEPLAYBACK];
@@ -43,7 +40,7 @@ int main(int argc, char* argv[])
 
 	for (int i = 0; i < SAMPLERATEPLAYBACK; i++)
 	{
-		sample = (sin((2 * M_PI * 880.0f) * (i / SAMPLERATEPLAYBACK)));
+		sample = (sin((2 * M_PI * 810.0f) * (i / SAMPLERATEPLAYBACK)));
 		obj[i] = (int)(sample * maxAmplitude / 9);
 	}
 

@@ -33,7 +33,7 @@ namespace ASIO
 
     public:
         ASIOBuffer
-        (ASIOSampleRate sampleRate, ASIOChannelInfo* channelInfo, ASIOBufferInfo* bufferInfo, int channelIOLimits[3]);
+        (ASIOSampleRate sampleRate, int channelIOLimits[3]);
         static double NanoSeconds;
         static double Samples;
         static double TimeCodeSamples;

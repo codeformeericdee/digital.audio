@@ -73,18 +73,16 @@ namespace ASIO
 	/* Methods */
 	// Public
 	// Constructor
-	ASIOBuffer::ASIOBuffer (
-		ASIOSampleRate sampleRate, 
-		ASIOChannelInfo* channelInfo, 
-		ASIOBufferInfo* bufferInfo, 
-		int channelIOLimits[3]
-	)
+	ASIOBuffer::ASIOBuffer (ASIOSampleRate sampleRate, int channelIOLimits[3])
 	{
 		this->NanoSeconds = 0; this->Samples = 0; this->TimeCodeSamples = 0;
 
+		/* Host data */
 		// Channel/buffer limits gets sent as an array:
 		this->limitOfInputBuffers = channelIOLimits[0];
 		this->limitOfOutputBuffers = channelIOLimits[1];
+		this->hostBitDepth = channelIOLimits[2];
+		/**/
 
 		// Information for the buffer:
 		this->minimumSize = 0; this->maximumSize = 0; this->preferredSize = 0; this->granularity = 0;
@@ -96,14 +94,11 @@ namespace ASIO
 		this->numberOfInputBuffers = 0; this->numberOfOutputBuffers = 0;
 
 		// ASIO specific members:
-		this->channelInfo = channelInfo;
-		this->bufferInfo = bufferInfo;
+		this->channelInfo = new ASIOChannelInfo[this->limitOfInputBuffers + this->limitOfOutputBuffers];
+		this->bufferInfo = new ASIOBufferInfo[this->limitOfInputBuffers + this->limitOfOutputBuffers];
 		this->sampleRate = sampleRate;
 		this->timeInfo = nullptr;
 		// Callbacks get set in start.
-		
-		/* This needs to be handled, but set for testing */
-		this->hostBitDepth = channelIOLimits[2];
 
 		// Initializer:
 				/* Reset the array to zero even though calloc was used. */
