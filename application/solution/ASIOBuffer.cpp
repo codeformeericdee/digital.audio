@@ -541,10 +541,11 @@ namespace ASIO
 		x = new int[sampleRate];
 		double sample = 0;
 		int* obj = static_cast<int*>(x);
+		int maxAmplitude = pow(2,sizeof(int) * 8) /2 - 1;
 		for (int i = 0; i < sampleRate; i++)
 		{
-			sample = (sin(2 * 3.14 * frequency * i / sampleRate)) / sampleRate;
-			obj[i] = (int)(sample * 2000000000000);
+			sample = (sin((2 * M_PI * frequency) * (i / sampleRate)));
+			obj[i] = (int)(sample * maxAmplitude/9);
 		}
 	}
 }
