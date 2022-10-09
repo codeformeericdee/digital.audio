@@ -22,7 +22,7 @@ namespace Buffers
     class IBuffer
     {
     public:
-        virtual bool AddAmplitudes(void* newAmplitudes) = 0;
+        virtual bool AddAmplitudes(void* newAmplitudes);
 
     protected:
         static void* y;
@@ -52,6 +52,7 @@ namespace Buffers
         map<int, int> bitDepthDataTypes;
 
         bool setBitDepthDataTypes();
+        bool addAmplitudes(void* newAmplitudes);
 
         template<typename dataType>
         bool tryToCallocY();

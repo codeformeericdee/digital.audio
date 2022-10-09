@@ -81,7 +81,7 @@ namespace ASIO
 
 	bool ASIOBuffer::AddAmplitudes(void* newAmplitudes)
 	{
-		return this->addAmplitudes(newAmplitudes);
+		return Buffers::IBuffer::AddAmplitudes(newAmplitudes);
 	}
 
 	//Private
@@ -541,37 +541,5 @@ namespace ASIO
 	bool ASIOBuffer::start()
 	{
 		return this->assignCallbacks() ? this->buildBuffers() : false;
-	}
-
-	bool ASIOBuffer::addAmplitudes(void* newAmplitudes)
-	{
-		if (this->hasY)
-		{
-			try
-			{
-				/* Uses additive synthesis to prepare the incoming buffer data */
-				int* object = static_cast<int*>(y);
-				int* amplitudes = static_cast<int*>(newAmplitudes);
-				for (int i = 0; i < sampleRate; i++)
-				{
-					object[i] += amplitudes[i];
-				}
-				return true;
-			}
-			catch (exception ex)
-			{
-				printf("The buffer Y array could not be additively adjusted. This is the exception that happened:\n%s\n", ex.what());
-				return false;
-			}
-		}
-		else
-		{
-			/* This indicates failure to allocate space. Likely due to a typedefinition being requested that doesn't exist */
-			printf(
-				"Error message: The ASIO buffer has no allocated space with which to place amplitudes.\n"
-				"Error info: This indicates failure to allocate space.\n"
-				"Error info: It is likely due to a typedefinition being requested that doesn't exist.\n"
-			);
-		}
 	}
 }

@@ -27,6 +27,11 @@ namespace Buffers
         IBuffer::numberOfInputBuffers,
         IBuffer::numberOfOutputBuffers;
 
+	bool IBuffer::AddAmplitudes(void* newAmplitudes)
+	{
+		return this->addAmplitudes(newAmplitudes);
+	}
+
 /* Protected methods */
 	bool IBuffer::defineY(bool reset)
 	{
@@ -34,7 +39,6 @@ namespace Buffers
 			Array definition method for calloc or manaul array resetting based on host needs.
 			This will iterate through maps defined during construction to determine which array size is needed.
 		*/
-
 		for (auto const& bitDepthCase : this->bitDepthDataTypes)
 		{
 			if (bitDepthCase.second == this->hostBitDepth)
@@ -74,6 +78,53 @@ namespace Buffers
 	{
 		this->bitDepthDataTypes.insert({ 1, this->bitDepth32Int });
 		return true;
+	}
+
+	bool IBuffer::addAmplitudes(void* newAmplitudes)
+	{
+		if (this->hasY)
+		{
+			for (auto const& bitDepthCase : this->bitDepthDataTypes)
+			{
+				if (bitDepthCase.second == this->hostBitDepth)
+				{
+					switch (bitDepthCase.first)
+					{
+					case TypeInt32Buffer:
+						try
+						{
+							/* Uses additive synthesis to prepare the incoming buffer data */
+							int* object = static_cast<int*>(y);
+							int* amplitudes = static_cast<int*>(newAmplitudes);
+							for (int i = 0; i < this->hostSampleRate; i++)
+							{
+								object[i] += amplitudes[i];
+							}
+							return true;
+						}
+						catch (exception ex)
+						{
+							printf(
+								"The buffer Y array could not be additively adjusted. This is the exception that happened:\n%s\n", ex.what());
+							return false;
+						}
+					default:
+						throw exception("This datatype is not implemented.");
+						return false;
+					}
+				}
+			}
+		}
+		else
+		{
+			/* This indicates failure to allocate space. 
+			   A failure like this is Likely due to a typedefinition being requested in an earlier sequence that doesn't exist */
+			printf(
+				"Error message: The buffer has no allocated space with which to place amplitudes.\n"
+				"Error info: This indicates failure to allocate space.\n"
+				"Error info: It is likely due to a typedefinition being requested that doesn't exist.\n"
+			);
+		}
 	}
 
 	template<typename dataType>

@@ -65,6 +65,5 @@ namespace ASIO
 
         bool assignCallbacks();
         ASIOSampleRate wrapSampleRate(ASIOSampleRate newRate = NULL);
-        bool addAmplitudes(void* newAmplitudes);
     };
 }
