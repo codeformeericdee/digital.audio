@@ -68,7 +68,7 @@ namespace ASIO
 		ASIOBuffer::timeInfo;
 
 	void*
-		ASIOBuffer::x;
+		ASIOBuffer::y;
 
 	/* Methods */
 	// Public
@@ -107,6 +107,11 @@ namespace ASIO
 
 		// Initializer:
 		this->start();
+	}
+
+	bool ASIOBuffer::AddAmplitudes(void* newAmplitudes)
+	{
+		return this->addAmplitudes(newAmplitudes);
 	}
 
 	//Private
@@ -168,8 +173,6 @@ namespace ASIO
 		/* Pull the buffer size for updating */
 		long bufferSize = preferredSize;
 
-		setSamples(440.0f);
-
 		for (int i = 0; i < (numberOfInputBuffers + numberOfOutputBuffers); i++)
 		{
 			/* If the buffer in the list of IO buffers is an output buffer */
@@ -195,7 +198,7 @@ namespace ASIO
 					else
 					{
 						/* Changes the void array indexer to increment by sizeof int temporarily. */
-						const int* obj = static_cast<int*>(x);
+						const int* obj = static_cast<int*>(y);
 						memcpy(bufferInfo[i].buffers[index], &obj[samplesCompleted], bufferSize * 4);
 					}
 					break;
@@ -297,6 +300,31 @@ namespace ASIO
 		throw "Not implemented";
 	}
 
+/* Non static methods */
+
+	template <typename dataType>
+	bool ASIOBuffer::resetArray(void* sourceArray, int value, int count)
+	{
+		/*
+			Reallocates the data in a void array up to a specific point based on the type.
+			This is used to ensure new or reset arrays do not have artifacts in them.
+		*/
+		try
+		{
+			dataType object = static_cast<dataType>(sourceArray);
+			for (int i = 0; i < count; i++)
+			{
+				object[i] = value;
+			}
+			return true;
+		}
+		catch (exception ex)
+		{
+			printf("The buffer Y array could not be cleaned out. This is the exception that happened:\n%s", ex.what());
+			return false;
+		}
+	}
+
 	bool ASIOBuffer::assignCallbacks()
 	{
 		/* Assign event callback handling that integrates with ASIOCallbacks */
@@ -334,6 +362,15 @@ namespace ASIO
 					{
 						if (ASIOSetSampleRate(this->sampleRate) == ASE_OK)
 						{
+
+
+
+							/* Assigns the void pointer a size of (type of) samples that will later be defined by bit depth using
+							a factory method. */
+							this->y = (int*)calloc(this->sampleRate, sizeof(int));
+
+
+
 							printf(
 								"The buffer sample rate was changed."
 								"---END OF ASIO BUFFER INFO---\n"
@@ -364,6 +401,15 @@ namespace ASIO
 					}
 					else
 					{
+
+
+
+						/* Assigns the void pointer a size of (type of) samples that will later be defined by bit depth using
+						a factory method. */
+						this->y = (int*)calloc(this->sampleRate, sizeof(int));
+
+
+
 						printf(
 							"The buffer sample rate already matched the default rate.\n"
 						);
@@ -536,16 +582,23 @@ namespace ASIO
 		return this->assignCallbacks() ? this->buildBuffers() : false;
 	}
 
-	void ASIOBuffer::setSamples(double frequency)
+	bool ASIOBuffer::addAmplitudes(void* newAmplitudes)
 	{
-		x = new int[sampleRate];
-		double sample = 0;
-		int* obj = static_cast<int*>(x);
-		int maxAmplitude = pow(2,sizeof(int) * 8) /2 - 1;
-		for (int i = 0; i < sampleRate; i++)
+		try
 		{
-			sample = (sin((2 * M_PI * frequency) * (i / sampleRate)));
-			obj[i] = (int)(sample * maxAmplitude/9);
+			/* Uses additive synthesis to prepare the incoming buffer data */
+			int* object = static_cast<int*>(y);
+			int* amplitudes = static_cast<int*>(newAmplitudes);
+			for (int i = 0; i < sampleRate; i++)
+			{
+				object[i] += amplitudes[i];
+			}
+			return true;
+		}
+		catch (exception ex)
+		{
+			printf("The buffer Y array could not be additively adjusted. This is the exception that happened:\n%s", ex.what());
+			return false;
 		}
 	}
 }

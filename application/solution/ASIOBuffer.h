@@ -22,6 +22,9 @@
 #include <corecrt_math_defines.h>
 #include "math.h"
 #include "cstring"
+#include <vector>
+
+using namespace std;
 
 namespace ASIO
 {
@@ -35,6 +38,8 @@ namespace ASIO
         static double Samples;
         static double TimeCodeSamples;
 
+        bool AddAmplitudes(void* newAmplitudes);
+
     private:
         static int limitOfInputBuffers, limitOfOutputBuffers, hostBitDepth, samplesCompleted;
 
@@ -43,6 +48,8 @@ namespace ASIO
             numberOfInputChannels, numberOfOutputChannels,
             numberOfInputBuffers, numberOfOutputBuffers,
             inputLatency, outputLatency;
+
+        static void* y;
 
         static ASIOChannelInfo* channelInfo;
         static ASIOBufferInfo* bufferInfo;
@@ -53,17 +60,16 @@ namespace ASIO
         static long asioMessage(long selector, long value, void* message, double* opt);
         static void bufferSwitch(long index, ASIOBool processNow);
         static void sampleRateDidChange(ASIOSampleRate sRate);
+        static bool addAmplitudes(void* newAmplitudes);
 
         ASIOCallbacks callBacks;
+
+        template <typename dataType>
+        bool resetArray(void* sourceArray, int value, int count);
 
         bool assignCallbacks();
         bool findLimits();
         bool buildBuffers();
         bool start();
-
-        // Data generation (will be abstracted into an oscillator class)
-        static void* x;
-
-        static void setSamples(double frequency);
     };
 }
