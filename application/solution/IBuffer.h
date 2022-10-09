@@ -31,9 +31,9 @@ namespace Buffers
             numberOfInputChannels, numberOfOutputChannels,
             numberOfInputBuffers, numberOfOutputBuffers;
 
-        static bool hasY;
-
         int bitDepth32Int;
+
+        bool hasY;
 
         virtual bool findLimits() = 0;
         virtual bool buildBuffers() = 0;

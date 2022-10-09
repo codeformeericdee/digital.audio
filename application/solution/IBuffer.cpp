@@ -20,9 +20,6 @@ namespace Buffers
         IBuffer::numberOfInputBuffers,
         IBuffer::numberOfOutputBuffers;
 
-	bool
-		IBuffer::hasY;
-
 /* Protected methods */
 	template <typename dataType>
 	bool IBuffer::resetArray(void* sourceArray, int value, int count)

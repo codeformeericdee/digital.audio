@@ -545,7 +545,7 @@ namespace ASIO
 
 	bool ASIOBuffer::addAmplitudes(void* newAmplitudes)
 	{
-		if (hasY)
+		if (this->hasY)
 		{
 			try
 			{

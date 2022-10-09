@@ -56,7 +56,6 @@ namespace ASIO
         static long asioMessage(long selector, long value, void* message, double* opt);
         static void bufferSwitch(long index, ASIOBool processNow);
         static void sampleRateDidChange(ASIOSampleRate sRate);
-        static bool addAmplitudes(void* newAmplitudes);
 
         ASIOCallbacks callBacks;
 
@@ -66,5 +65,6 @@ namespace ASIO
 
         bool assignCallbacks();
         ASIOSampleRate wrapSampleRate(ASIOSampleRate newRate = NULL);
+        bool addAmplitudes(void* newAmplitudes);
     };
 }
