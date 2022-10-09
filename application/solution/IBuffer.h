@@ -1,3 +1,10 @@
+/*
+
+    Header for a versatile buffer interface written by Eric Dee.
+    2022
+
+*/
+
 #pragma once
 
 #include <cstdio>

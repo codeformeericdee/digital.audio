@@ -1,3 +1,10 @@
+/*
+
+	Code for a versatile buffer interface written by Eric Dee.
+	2022
+
+*/
+
 #include "IBuffer.h"
 
 namespace Buffers
