@@ -38,12 +38,6 @@ namespace Buffers
         virtual bool findLimits() = 0;
         virtual bool buildBuffers() = 0;
 
-        template <typename dataType>
-        bool resetArray(void* sourceArray, int value, int count);
-
-        template<typename dataType>
-        bool tryToCallocY();
-
         bool defineY(bool reset = false);
         bool initialize();
 
@@ -51,6 +45,13 @@ namespace Buffers
         map<int, int> bitDepthDataTypes;
 
         bool setBitDepthDataTypes();
+
+        template<typename dataType>
+        bool tryToCallocY();
+
+        template <typename dataType>
+        bool resetArray(void* sourceArray, int value, int count);
+
         virtual bool start() = 0;
     };
 }

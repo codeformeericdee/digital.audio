@@ -21,46 +21,6 @@ namespace Buffers
         IBuffer::numberOfOutputBuffers;
 
 /* Protected methods */
-	template <typename dataType>
-	bool IBuffer::resetArray(void* sourceArray, int value, int count)
-	{
-		/*
-			Reallocates the data in a void array up to a specific point based on the type.
-			This is used to ensure new or reset arrays do not have artifacts in them.
-		*/
-		try
-		{
-			dataType* object = static_cast<dataType*>(sourceArray);
-			for (int i = 0; i < count; i++)
-			{
-				object[i] = value;
-			}
-			return true;
-		}
-		catch (exception ex)
-		{
-			printf("The buffer Y array could not be cleaned out. This is the exception that happened:\n%s\n", ex.what());
-			return false;
-		}
-	}
-
-	template<typename dataType>
-	bool IBuffer::tryToCallocY()
-	{
-		/*
-			Initializes an array with zeros of any type assigned to a void pointer.
-		*/
-		try
-		{
-			this->y = (dataType*)calloc(this->hostSampleRate, sizeof(dataType));
-			return true;
-		}
-		catch (exception ex)
-		{
-			throw exception(("The buffer could not calloc a Y array. This is the exception that happened:\n%s\n", ex.what()));
-		}
-	}
-
 	bool IBuffer::defineY(bool reset)
 	{
 		/* 
@@ -97,6 +57,11 @@ namespace Buffers
 		}
 	}
 
+	bool IBuffer::initialize()
+	{
+		return this->setBitDepthDataTypes() ? this->start() : false;
+	}
+
 /* Private methods */
 	bool IBuffer::setBitDepthDataTypes()
 	{
@@ -104,8 +69,43 @@ namespace Buffers
 		return true;
 	}
 
-	bool IBuffer::initialize()
+	template<typename dataType>
+	bool IBuffer::tryToCallocY()
 	{
-		return this->setBitDepthDataTypes() ? this->start() : false;
+		/*
+			Initializes an array with zeros of any type assigned to a void pointer.
+		*/
+		try
+		{
+			this->y = (dataType*)calloc(this->hostSampleRate, sizeof(dataType));
+			return true;
+		}
+		catch (exception ex)
+		{
+			throw exception(("The buffer could not calloc a Y array. This is the exception that happened:\n%s\n", ex.what()));
+		}
+	}
+
+	template <typename dataType>
+	bool IBuffer::resetArray(void* sourceArray, int value, int count)
+	{
+		/*
+			Reallocates the data in a void array up to a specific point based on the type.
+			This is used to ensure new or reset arrays do not have artifacts in them.
+		*/
+		try
+		{
+			dataType* object = static_cast<dataType*>(sourceArray);
+			for (int i = 0; i < count; i++)
+			{
+				object[i] = value;
+			}
+			return true;
+		}
+		catch (exception ex)
+		{
+			printf("The buffer Y array could not be cleaned out. This is the exception that happened:\n%s\n", ex.what());
+			return false;
+		}
 	}
 }
