@@ -44,8 +44,7 @@ namespace ASIO
 	/* Methods */
 	// Public
 	// Constructor
-	ASIOBuffer::ASIOBuffer(ASIOSampleRate sampleRate, int channelIOLimits[3])
-		: Buffers::IBuffer(new int { ASIOSTInt32LSB }, 1)
+	ASIOBuffer::ASIOBuffer(ASIOSampleRate sampleRate, int channelIOLimits[3]) : Buffers::IBuffer()
 	{
 		this->NanoSeconds = 0; this->Samples = 0; this->TimeCodeSamples = 0;
 
@@ -72,9 +71,12 @@ namespace ASIO
 		this->timeInfo = nullptr;
 		// Callbacks get set in start.
 
+		// Set the fields that will become keys when initialize is called
+		this->bitDepth32Int = ASIOSTInt32LSB;
+
 		// Initializer:
 				/* Reset the array to zero even though calloc was used. */
-		this->start() ? this->defineY(true) : false;
+		this->initialize() ? this->defineY(true) : false;
 	}
 
 	bool ASIOBuffer::AddAmplitudes(void* newAmplitudes)
@@ -543,21 +545,33 @@ namespace ASIO
 
 	bool ASIOBuffer::addAmplitudes(void* newAmplitudes)
 	{
-		try
+		if (hasY)
 		{
-			/* Uses additive synthesis to prepare the incoming buffer data */
-			int* object = static_cast<int*>(y);
-			int* amplitudes = static_cast<int*>(newAmplitudes);
-			for (int i = 0; i < sampleRate; i++)
+			try
 			{
-				object[i] += amplitudes[i];
+				/* Uses additive synthesis to prepare the incoming buffer data */
+				int* object = static_cast<int*>(y);
+				int* amplitudes = static_cast<int*>(newAmplitudes);
+				for (int i = 0; i < sampleRate; i++)
+				{
+					object[i] += amplitudes[i];
+				}
+				return true;
 			}
-			return true;
+			catch (exception ex)
+			{
+				printf("The buffer Y array could not be additively adjusted. This is the exception that happened:\n%s\n", ex.what());
+				return false;
+			}
 		}
-		catch (exception ex)
+		else
 		{
-			printf("The buffer Y array could not be additively adjusted. This is the exception that happened:\n%s\n", ex.what());
-			return false;
+			/* This indicates failure to allocate space. Likely due to a typedefinition being requested that doesn't exist */
+			printf(
+				"Error message: The ASIO buffer has no allocated space with which to place amplitudes.\n"
+				"Error info: This indicates failure to allocate space.\n"
+				"Error info: It is likely due to a typedefinition being requested that doesn't exist.\n"
+			);
 		}
 	}
 }

@@ -15,8 +15,6 @@ namespace Buffers
     class IBuffer
     {
     public:
-        IBuffer(int definitions[], int count);
-
         virtual bool AddAmplitudes(void* newAmplitudes) = 0;
 
     protected:
@@ -33,19 +31,26 @@ namespace Buffers
             numberOfInputChannels, numberOfOutputChannels,
             numberOfInputBuffers, numberOfOutputBuffers;
 
+        static bool hasY;
+
+        int bitDepth32Int;
+
+        virtual bool findLimits() = 0;
+        virtual bool buildBuffers() = 0;
+
         template <typename dataType>
         bool resetArray(void* sourceArray, int value, int count);
 
         template<typename dataType>
         bool tryToCallocY();
 
-        virtual bool findLimits() = 0;
-        virtual bool buildBuffers() = 0;
-        virtual bool start() = 0;
-
         bool defineY(bool reset = false);
+        bool initialize();
 
     private:
         map<int, int> bitDepthDataTypes;
+
+        bool setBitDepthDataTypes();
+        virtual bool start() = 0;
     };
 }

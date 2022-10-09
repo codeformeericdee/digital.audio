@@ -20,15 +20,10 @@ namespace Buffers
         IBuffer::numberOfInputBuffers,
         IBuffer::numberOfOutputBuffers;
 
-	IBuffer::IBuffer(int definitions[], int count)
-	{
-		/* Since various libraries use different define values, this allows each buffer to inject their own as a map. */
-		for (int i = 0; i < count; i++)
-		{
-			this->bitDepthDataTypes.insert({ i + 1, definitions[i] });
-		}
-	}
+	bool
+		IBuffer::hasY;
 
+/* Protected methods */
 	template <typename dataType>
 	bool IBuffer::resetArray(void* sourceArray, int value, int count)
 	{
@@ -86,7 +81,8 @@ namespace Buffers
 					try
 					{
 						return reset ?
-							this->resetArray<int>(this->y, 0, this->hostSampleRate) : this->tryToCallocY<int>();
+							this->hasY = this->resetArray<int>(this->y, 0, this->hostSampleRate) 
+							: this->hasY = this->tryToCallocY<int>();
 					}
 					catch (exception ex)
 					{
@@ -97,6 +93,22 @@ namespace Buffers
 					return false;
 				}
 			}
+			else
+			{
+				this->hasY = false;
+			}
 		}
+	}
+
+/* Private methods */
+	bool IBuffer::setBitDepthDataTypes()
+	{
+		this->bitDepthDataTypes.insert({ 1, this->bitDepth32Int });
+		return true;
+	}
+
+	bool IBuffer::initialize()
+	{
+		return this->setBitDepthDataTypes() ? this->start() : false;
 	}
 }
