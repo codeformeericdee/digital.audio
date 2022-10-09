@@ -43,7 +43,7 @@ namespace ASIO
     private:
         static int limitOfInputBuffers, limitOfOutputBuffers, hostBitDepth, samplesCompleted;
 
-        static long 
+        static long
             minimumSize, maximumSize, preferredSize, granularity,
             numberOfInputChannels, numberOfOutputChannels,
             numberOfInputBuffers, numberOfOutputBuffers,
@@ -67,9 +67,13 @@ namespace ASIO
         template <typename dataType>
         bool resetArray(void* sourceArray, int value, int count);
 
+        template<typename dataType>
+        bool tryToCallocY();
+
         bool assignCallbacks();
         bool findLimits();
         bool buildBuffers();
         bool start();
+        bool defineY(bool reset = false);
     };
 }

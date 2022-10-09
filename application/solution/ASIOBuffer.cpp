@@ -106,7 +106,8 @@ namespace ASIO
 		this->hostBitDepth = channelIOLimits[2];
 
 		// Initializer:
-		this->start();
+				/* Reset the array to zero even though calloc was used. */
+		this->start() ? this->defineY(true) : false;
 	}
 
 	bool ASIOBuffer::AddAmplitudes(void* newAmplitudes)
@@ -190,6 +191,7 @@ namespace ASIO
 				case ASIOSTInt24LSB:
 					memset(bufferInfo[i].buffers[index], 0, bufferSize * 3);
 					break;
+
 				case ASIOSTInt32LSB:
 					if (samplesCompleted >= sampleRate)
 					{
@@ -202,6 +204,7 @@ namespace ASIO
 						memcpy(bufferInfo[i].buffers[index], &obj[samplesCompleted], bufferSize * 4);
 					}
 					break;
+
 				case ASIOSTFloat32LSB:
 					memset(bufferInfo[i].buffers[index], 0, bufferSize * 4);
 					break;
@@ -311,7 +314,7 @@ namespace ASIO
 		*/
 		try
 		{
-			dataType object = static_cast<dataType>(sourceArray);
+			dataType* object = static_cast<dataType*>(sourceArray);
 			for (int i = 0; i < count; i++)
 			{
 				object[i] = value;
@@ -320,8 +323,25 @@ namespace ASIO
 		}
 		catch (exception ex)
 		{
-			printf("The buffer Y array could not be cleaned out. This is the exception that happened:\n%s", ex.what());
+			printf("The buffer Y array could not be cleaned out. This is the exception that happened:\n%s\n", ex.what());
 			return false;
+		}
+	}
+
+	template<typename dataType>
+	bool ASIOBuffer::tryToCallocY()
+	{
+		/*
+			Initializes an array with zeros of any type assigned to a void pointer.
+		*/
+		try
+		{
+			this->y = (dataType*)calloc(this->sampleRate, sizeof(dataType));
+			return true;
+		}
+		catch (exception ex)
+		{
+			throw exception(("The buffer could not calloc a Y array. This is the exception that happened:\n%s\n", ex.what()));
 		}
 	}
 
@@ -362,30 +382,30 @@ namespace ASIO
 					{
 						if (ASIOSetSampleRate(this->sampleRate) == ASE_OK)
 						{
-
-
-
-							/* Assigns the void pointer a size of (type of) samples that will later be defined by bit depth using
-							a factory method. */
-							this->y = (int*)calloc(this->sampleRate, sizeof(int));
-
-
-
 							printf(
-								"The buffer sample rate was changed."
+								"The buffer sample rate was changed.\n"
 								"---END OF ASIO BUFFER INFO---\n"
 							);
-							// check whether the driver requires the ASIOOutputReady() optimization
-							// (can be used by the driver to reduce output latency by one block)
-							if (ASIOOutputReady() == ASE_OK)
+							if (this->defineY())
 							{
-								printf("ASIO output set to ready.");
-								//this->postOutput = true;
-								return true;
+								// check whether the driver requires the ASIOOutputReady() optimization
+								// (can be used by the driver to reduce output latency by one block)
+								if (ASIOOutputReady() == ASE_OK)
+								{
+									printf("ASIO output set to ready.");
+									//this->postOutput = true;
+									return true;
+								}
+								else
+								{
+									//this->postOutput = false;
+									printf("---END OF ASIO BUFFER INFO---\n");
+									return false;
+								}
 							}
 							else
 							{
-								//this->postOutput = false;
+								printf("---END OF ASIO BUFFER INFO---\n");
 								return false;
 							}
 						}
@@ -401,26 +421,25 @@ namespace ASIO
 					}
 					else
 					{
-
-
-
-						/* Assigns the void pointer a size of (type of) samples that will later be defined by bit depth using
-						a factory method. */
-						this->y = (int*)calloc(this->sampleRate, sizeof(int));
-
-
-
 						printf(
 							"The buffer sample rate already matched the default rate.\n"
 						);
-						if (ASIOOutputReady() == ASE_OK)
+						if (this->defineY())
 						{
-							printf(
-								"The output is set to ready.\n"
-								"---END OF ASIO BUFFER INFO---\n"
-							);
-							return true;
-							/*asioDriverInfo->postOutput = true;*/
+							if (ASIOOutputReady() == ASE_OK)
+							{
+								printf(
+									"The output is set to ready.\n"
+									"---END OF ASIO BUFFER INFO---\n"
+								);
+								return true;
+								/*asioDriverInfo->postOutput = true;*/
+							}
+							else
+							{
+								printf("---END OF ASIO BUFFER INFO---\n");
+								return false;
+							}
 						}
 						else
 						{
@@ -582,6 +601,26 @@ namespace ASIO
 		return this->assignCallbacks() ? this->buildBuffers() : false;
 	}
 
+	bool ASIOBuffer::defineY(bool reset)
+	{
+		/* Array definition method with an override for calloc or manaul based on host needs */
+		switch (this->hostBitDepth)
+		{
+		case ASIOSTInt32LSB:
+			try
+			{
+				return reset ?
+					this->resetArray<int>(this->y, 0, this->sampleRate) : this->tryToCallocY<int>();
+			}
+			catch (exception ex)
+			{
+				throw exception(("The buffer could not generate a 32 bit depth array with this error:\n%s\n", ex.what()));
+			}
+		default:
+			return false;
+		}
+	}
+
 	bool ASIOBuffer::addAmplitudes(void* newAmplitudes)
 	{
 		try
@@ -597,7 +636,7 @@ namespace ASIO
 		}
 		catch (exception ex)
 		{
-			printf("The buffer Y array could not be additively adjusted. This is the exception that happened:\n%s", ex.what());
+			printf("The buffer Y array could not be additively adjusted. This is the exception that happened:\n%s\n", ex.what());
 			return false;
 		}
 	}
