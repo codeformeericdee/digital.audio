@@ -6,47 +6,54 @@
 */
 
 #include "ASIOBuffer.h"
+#include "IOscillator.h"
 #include "Playback.h"
 
 #define NAMEDRIVER "Yamaha Steinberg USB ASIO"
 #define SAMPLERATEPLAYBACK 44100.0f
 
+#ifndef MATHCPP
+#define MATHCPP
+#include "math.h"
+#endif // !MATHCPP
+
 using namespace std;
 
 int main(int argc, char* argv[])
 {
+	/* Determine drivers */
 	Playback::DriverCache myDrivers = Playback::DriverCache();
-	/* Number of inputand outputs supported by the host. These can be changed. */
+	
+	/* Assign host limitations */
 	enum { kMaxInputChannels = 32, kMaxOutputChannels = 32, hostBitDepth = 32 };
+	int maxAmplitude = pow(2, (unsigned long long)hostBitDepth) / 2 - 1;
 	int channelIOLimits[3] = { kMaxInputChannels, kMaxOutputChannels, ASIOSTInt32LSB };
+	
+	/* Open the driver? */
 	bool openControls = false;
 
+	/* Add available drivers, and use one */
 	myDrivers.AddToMap(TYPEASIO, NAMEDRIVER);
 	Workstation::DriverManager driverManager = UseDriverCache(&myDrivers);
 	driverManager.ChangeToDriver(NAMEDRIVER, openControls);
 
+	/* Instantiate the buffer. This should be changed to a factory method based on the selected driver */
 	ASIO::ASIOBuffer bufferOne = ASIO::ASIOBuffer(SAMPLERATEPLAYBACK, channelIOLimits);
 
-	double sample = 0;
-	int* obj = new int[SAMPLERATEPLAYBACK];
-	int maxAmplitude = pow(2, sizeof(int) * 8) / 2 - 1;
-	for (int i = 0; i < SAMPLERATEPLAYBACK; i++)
-	{
-		sample = (sin((2 * M_PI * 440.0f) * (i / SAMPLERATEPLAYBACK)));
-		obj[i] = (int)(sample * maxAmplitude / 18);
-	}
+	/* Oscillators(later to be tacks containing synthesizers or samplers) */
+	Oscillation::IOscillator oscillatorOne = Oscillation::IOscillator(SAMPLERATEPLAYBACK);
 
-	bufferOne.AddAmplitudes(obj);
+	/* Always a factor of bit depth. Typically signed hence divided by two, minus 1 for the sign holder */
+	void* trackOneY = new int[SAMPLERATEPLAYBACK];
+	void* trackTwoY = new int[SAMPLERATEPLAYBACK];
 
-	for (int i = 0; i < SAMPLERATEPLAYBACK; i++)
-	{
-		sample = (sin((2 * M_PI * 810.0f) * (i / SAMPLERATEPLAYBACK)));
-		obj[i] = (int)(sample * maxAmplitude / 9);
-	}
+	oscillatorOne.ApplySineWavePoints(trackOneY, maxAmplitude/18, 440.0f);
+	bufferOne.AddAmplitudes(trackOneY);
 
-	bufferOne.AddAmplitudes(obj);
+	oscillatorOne.ApplySineWavePoints(trackTwoY, maxAmplitude/9, 810.0f);
+	bufferOne.AddAmplitudes(trackTwoY);
 
-	// Start ASIO
+	// Start ASIO (while i < seconds)
 	if (ASIOStart() == ASE_OK)
 	{
 		fprintf(stdout, "---STATUS---\nDriver did start.\n\n");

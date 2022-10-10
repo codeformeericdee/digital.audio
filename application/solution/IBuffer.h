@@ -7,11 +7,14 @@
 
 #pragma once
 
-#include <cstdio>
-#include <iostream>
-#include <map>
+#ifndef STANDARDCPP
+    #define STANDARDCPP
+    #include <cstdio>
+    #include <iostream>
+    using namespace std;
+#endif // !STANDARDCPP
 
-using namespace std;
+#include <map>
 
 namespace Buffers
 {

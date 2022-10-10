@@ -8,24 +8,19 @@
 #pragma once
 
 #ifndef ASIOSYS
-#define ASIOSYS
-#include "asiosys.h"
+    #define ASIOSYS
+    #include "asiosys.h"
 #endif
 
 #ifndef ASIOLIB
-#define ASIOLIB
-#include "asio.h"
-#include "asiodrivers.h"
+    #define ASIOLIB
+    #include "asio.h"
+    #include "asiodrivers.h"
 #endif
 
-#include <corecrt_math_defines.h>
-#include "math.h"
-#include "cstring"
-#include <vector>
-
 #ifndef PLAYBACKBUFFERS
-#define PLAYBACKBUFFERS
-#include "IBuffer.h"
+    #define PLAYBACKBUFFERS
+    #include "IBuffer.h"
 #endif // !PLAYBACKBUFFERS
 
 namespace ASIO
