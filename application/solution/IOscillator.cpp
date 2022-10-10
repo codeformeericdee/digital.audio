@@ -1,3 +1,10 @@
+/*
+
+	Code for an oscillator written by Eric Dee.
+	2022
+
+*/
+
 #include "IOscillator.h"
 
 namespace Oscillation

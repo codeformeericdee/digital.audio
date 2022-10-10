@@ -1,3 +1,10 @@
+/*
+
+    Header for an oscillator written by Eric Dee.
+    2022
+
+*/
+
 #pragma once
 
 #include <corecrt_math_defines.h>
